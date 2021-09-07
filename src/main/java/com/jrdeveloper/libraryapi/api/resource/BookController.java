@@ -9,8 +9,10 @@ import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/books")
@@ -18,6 +20,7 @@ public class BookController {
 
     private IBookService bookService;
     private ModelMapper modelMapper;
+
     public BookController(IBookService bookService, ModelMapper modelMapper) {
         this.bookService = bookService;
         this.modelMapper = modelMapper;
@@ -25,29 +28,35 @@ public class BookController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public BookDTO create(@RequestBody @Valid BookDTO dto){
+    public BookDTO create(@RequestBody @Valid BookDTO dto) {
         var entity = modelMapper.map(dto, Book.class);
         entity = bookService.save(entity);
         var dtoSaved = modelMapper.map(entity, BookDTO.class);
         return dtoSaved;
     }
 
+    @GetMapping("{id}")
+    public BookDTO get(@PathVariable UUID id) {
+        return bookService.getById(id)
+                .map(book -> modelMapper.map(book, BookDTO.class))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiErrors handleValidationExceptions(MethodArgumentNotValidException ex)
-    {
+    public ApiErrors handleValidationExceptions(MethodArgumentNotValidException ex) {
         var result = ex.getBindingResult();
 
         return new ApiErrors(result);
 
     }
+
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiErrors handleBusinessException(BusinessException ex)
-    {
+    public ApiErrors handleBusinessException(BusinessException ex) {
         return new ApiErrors(ex);
     }
-
 
 
 }

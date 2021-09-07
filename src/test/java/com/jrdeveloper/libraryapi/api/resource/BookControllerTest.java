@@ -21,6 +21,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import javax.swing.text.html.Option;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -44,7 +46,7 @@ public class BookControllerTest {
 
     @Test
     @DisplayName("Deve Criar um livro com Sucesso")
-    public void createBookTest() throws Exception{
+    public void createBookTest() throws Exception {
 
         var dto = createNewBookDTO();
         var entity = Book.builder().author("Artur").id(UUID.randomUUID()).isbn("0001").title("Titulo").build();
@@ -66,10 +68,9 @@ public class BookControllerTest {
     }
 
 
-
     @Test
     @DisplayName("Deve lançar erro de validação quando não houver dados para criação do livro")
-    public void createInvalidBookTest() throws Exception{
+    public void createInvalidBookTest() throws Exception {
 
         var json = new ObjectMapper().writeValueAsString(new BookDTO());
 
@@ -78,10 +79,10 @@ public class BookControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
                 .content(json);
-        
+
         mvc.perform(request)
                 .andExpect(status().isBadRequest())
-               .andExpect(jsonPath("errors",  hasSize(3)));
+                .andExpect(jsonPath("errors", hasSize(3)));
     }
 
     @Test
@@ -106,6 +107,54 @@ public class BookControllerTest {
                 .andExpect(jsonPath("errors", hasSize(1)))
                 .andExpect(jsonPath("errors[0]").value(mensagemErro));
 
+    }
+
+    @Test
+    @DisplayName("Deve retornar as informações do livro")
+    public void getBookDDetailsTest() throws Exception {
+        var id = UUID.randomUUID();
+
+        var book = Book.builder()
+                .id(id)
+                .title(createNewBookDTO().getTitle())
+                .author(createNewBookDTO().getAuthor())
+                .isbn(createNewBookDTO().getIsbn())
+                .build();
+
+        BDDMockito.given(service.getById(id)).willReturn(Optional.of(book));
+
+        var request = MockMvcRequestBuilders
+                .get(BOOK_API.concat("/"+id))
+                .accept(MediaType.APPLICATION_JSON);
+
+        mvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("id").value(id.toString()))
+                .andExpect(jsonPath("title").value(book.getTitle()))
+                .andExpect(jsonPath("author").value(book.getAuthor()))
+                .andExpect(jsonPath("isbn").value(book.getIsbn()));
+    }
+
+    @Test
+    @DisplayName("Deve retornar resource not found quando o livro procurado não existir")
+    public void bookNotFoundTest() throws Exception {
+        var id = UUID.randomUUID();
+
+        var book = Book.builder()
+                .id(id)
+                .title(createNewBookDTO().getTitle())
+                .author(createNewBookDTO().getAuthor())
+                .isbn(createNewBookDTO().getIsbn())
+                .build();
+
+        BDDMockito.given(service.getById(Mockito.any(UUID.class))).willReturn(Optional.empty());
+
+        var request = MockMvcRequestBuilders
+                .get(BOOK_API.concat("/"+id))
+                .accept(MediaType.APPLICATION_JSON);
+
+        mvc.perform(request)
+                .andExpect(status().isNotFound());
     }
     private BookDTO createNewBookDTO() {
         return BookDTO.builder().author("Artur").title("Titulo").isbn("0001").build();

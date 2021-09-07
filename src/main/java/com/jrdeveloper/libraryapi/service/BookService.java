@@ -6,6 +6,9 @@ import com.jrdeveloper.libraryapi.repository.interfaces.IBookRepository;
 import com.jrdeveloper.libraryapi.service.interfaces.IBookService;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+import java.util.UUID;
+
 @Service
 public class BookService implements IBookService {
     private IBookRepository repository;
@@ -18,10 +21,14 @@ public class BookService implements IBookService {
     @Override
     public Book save(Book book) {
 
-        if(repository.existsByIsbn(book.getIsbn()))
-        {
+        if (repository.existsByIsbn(book.getIsbn())) {
             throw new BusinessException("ISBN Ja Cadastrado");
         }
         return repository.save(book);
+    }
+
+    @Override
+    public Optional<Book> getById(UUID id) {
+        return Optional.empty();
     }
 }
